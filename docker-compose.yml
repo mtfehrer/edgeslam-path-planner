@@ -24,6 +24,7 @@ services:
             - ./edgeslam/exported-data/all-points.txt:/home/planner/all-points.txt
             - ./edgeslam/exported-data/newest-pose.txt:/home/planner/newest-pose.txt
             - ./edgeslam/exported-data/all-poses.txt:/home/planner/all-poses.txt
+        command: ["bash", "main"]
 
 networks:
     mynet:

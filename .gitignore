@@ -71,3 +71,5 @@ Examples/ROS/Edge_SLAM/build/
 *.tar
 
 .vscode
+
+planner/main
