@@ -61,9 +61,6 @@ Examples/ROS/Edge_SLAM/RGBD
 Examples/ROS/Edge_SLAM/Stereo
 Examples/ROS/Edge_SLAM/build/
 
-# Datasets
-*.bag
-
 # SDKs
 *.run
 

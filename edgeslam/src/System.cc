@@ -89,9 +89,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, std::str
         mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
                                 mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor);
 
-        new thread(SaveMapPointsLoop);
-        new thread(SaveAllPosesLoop);
-        new thread(SaveNewestPoseLoop);
+        new thread(&ORB_SLAM2::System::SaveMapPointsLoop, this);
+        new thread(&ORB_SLAM2::System::SaveAllPosesLoop, this);
+        new thread(&ORB_SLAM2::System::SaveNewestPoseLoop, this);
     } else if (RunType.compare("server") == 0){
         // Edge-SLAM: added settings file
         //Initialize the Local Mapping thread and launch
@@ -461,14 +461,14 @@ void System::SaveMapPointsLoop() {
         ofstream f;
         f.open(mapPointsFilename.c_str());
 
-        unique_lock<mutex> lock(mMutexState);
+        //unique_lock<mutex> lock(mMutexState);
         vector<MapPoint*> mapPoints = mpMap->GetAllMapPoints();
         vector<cv::Mat> worldPos;
         for (size_t i=0; i<mapPoints.size(); i++) {
             worldPos.push_back(mapPoints[i]->GetWorldPos());
         }
         for (size_t i=0; i<worldPos.size(); i++) {
-            f << worldPos[i].at<double>(0,0) << " " << worldPos[i].at<double>(0,1) << " " << worldPos[i].at<double>(0,2) << endl;
+            f << worldPos[i].at<float>(0,0) << " " << worldPos[i].at<float>(0,1) << " " << worldPos[i].at<float>(0,2) << endl;
         }
 
         f.close();
@@ -483,14 +483,14 @@ void System::SaveNewestPoseLoop() {
         ofstream f;
         f.open(newestPoseFilename.c_str());
 
-        unique_lock<mutex> lock(mMutexState);
-        newestKeyFrameId = KeyFrame::nNextId;
-        keyFrame = mpMap.RetrieveKeyFrame(newestKeyFrameId);
-        cv::Mat poseMatrix = keyFrame.GetPose();
+        //unique_lock<mutex> lock(mMutexState);
+        int newestKeyFrameId = KeyFrame::nNextId;
+        KeyFrame* keyFrame = mpMap->RetrieveKeyFrame(newestKeyFrameId);
+        cv::Mat poseMatrix = keyFrame->GetPose();
 
         for (int r = 0; r < 4; ++r) {
             for (int c = 0; c < 4; ++c) {
-                f << poseMatrix.at<double>(r, c);
+                f << poseMatrix.at<float>(r, c);
                 if (c < poseMatrix.cols - 1) {
                     f << " ";
                 }
@@ -508,13 +508,13 @@ void System::SaveAllPosesLoop() {
         ofstream f;
         f.open(allPosesFilename.c_str());
 
-        unique_lock<mutex> lock(mMutexState);
-        vector<KeyFrame*> keyFrames = mpMap.GetAllKeyFrames();
+        //unique_lock<mutex> lock(mMutexState);
+        vector<KeyFrame*> keyFrames = mpMap->GetAllKeyFrames();
         for (int i = 0; i < keyFrames.size(); i++) {
-            cv::Mat poseMatrix = keyFrame.GetPose();
+            cv::Mat poseMatrix = keyFrames[i]->GetPose();
             for (int r = 0; r < 4; ++r) {
                 for (int c = 0; c < 4; ++c) {
-                    f << poseMatrix.at<double>(r, c);
+                    f << poseMatrix.at<float>(r, c);
                     if (c < poseMatrix.cols - 1) {
                         f << " ";
                     }
