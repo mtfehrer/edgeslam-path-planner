@@ -290,12 +290,20 @@ void System::SaveMapPointsLoop() {
         ofstream f;
         f.open(mapPointsFilename.c_str());
 
-        //unique_lock<mutex> lock(mMutexState);
+        if (!f.is_open()) {
+            std::cerr << "ERROR: Failed to open map points file: " << mapPointsFilename << std::endl;
+            sleep(1);
+            continue;
+        }
+
+        mpMap->mMutexMapUpdate.lock();
         vector<MapPoint*> mapPoints = mpMap->GetAllMapPoints();
         vector<cv::Mat> worldPos;
         for (size_t i=0; i<mapPoints.size(); i++) {
             worldPos.push_back(mapPoints[i]->GetWorldPos());
         }
+        mpMap->mMutexMapUpdate.unlock();
+
         for (size_t i=0; i<worldPos.size(); i++) {
             f << worldPos[i].at<float>(0,0) << " " << worldPos[i].at<float>(0,1) << " " << worldPos[i].at<float>(0,2) << endl;
         }
@@ -312,10 +320,23 @@ void System::SaveNewestPoseLoop() {
         ofstream f;
         f.open(newestPoseFilename.c_str());
 
-        //unique_lock<mutex> lock(mMutexState);
+        if (!f.is_open()) {
+            std::cerr << "ERROR: Failed to open newest pose file: " << newestPoseFilename << std::endl;
+            sleep(1);
+            continue;
+        }
+
+        mpMap->mMutexMapUpdate.lock();
         int newestKeyFrameId = KeyFrame::nNextId;
-        KeyFrame* keyFrame = mpMap->RetrieveKeyFrame(newestKeyFrameId);
+        KeyFrame* keyFrame = mpMap->RetrieveKeyFrame(newestKeyFrameId - 1);
+        if (keyFrame == nullptr) {
+            std::cout << "No key frames exist yet" << std::endl;
+            mpMap->mMutexMapUpdate.unlock();
+            sleep(1);
+            continue;
+        }
         cv::Mat poseMatrix = keyFrame->GetPose();
+        mpMap->mMutexMapUpdate.unlock();
 
         for (int r = 0; r < 4; ++r) {
             for (int c = 0; c < 4; ++c) {
@@ -337,7 +358,13 @@ void System::SaveAllPosesLoop() {
         ofstream f;
         f.open(allPosesFilename.c_str());
 
-        //unique_lock<mutex> lock(mMutexState);
+        if (!f.is_open()) {
+            std::cerr << "ERROR: Failed to open all poses file: " << allPosesFilename << std::endl;
+            sleep(1);
+            continue;
+        }
+
+        mpMap->mMutexMapUpdate.lock();
         vector<KeyFrame*> keyFrames = mpMap->GetAllKeyFrames();
         for (int i = 0; i < keyFrames.size(); i++) {
             cv::Mat poseMatrix = keyFrames[i]->GetPose();
@@ -352,6 +379,7 @@ void System::SaveAllPosesLoop() {
             }
             f << "\n";
         }
+        mpMap->mMutexMapUpdate.unlock();
 
         f.close();
         sleep(1);
