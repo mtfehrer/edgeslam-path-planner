@@ -8,10 +8,9 @@ services:
             - ./edgeslam/exported-data/all-points.txt:/home/edgeslam/all-points.txt
             - ./edgeslam/exported-data/newest-pose.txt:/home/edgeslam/newest-pose.txt
             - ./edgeslam/exported-data/all-poses.txt:/home/edgeslam/all-poses.txt
-            - ./start-mobile-container-test.sh:/home/edgeslam/start-mobile-container-test.sh
         devices:
             - /dev/dri:/dev/dri
-        command: ["bash", "start-mobile-container-test.sh"]
+        command: ["bash", "start-mobile-container.sh"]
         networks:
             mynet:
                 ipv4_address: 1.1.0.2
