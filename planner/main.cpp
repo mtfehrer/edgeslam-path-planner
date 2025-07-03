@@ -3,20 +3,40 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
+#include <cmath>
+#include <limits>
 
 using namespace std;
 
 const int GRID_SIZE = 50;
 const int VOXEL_SIZE = 1;
 
+
 // string mapPointsFilename = "/home/map-points.txt";
 // string newestPoseFilename = "/home/newest-pose.txt";
 // string allPosesFilename = "/home/all-poses.txt";
+
 
 //for testing without docker
 string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/map-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
+
+struct Vec3 {
+    double x = 0.0f, y = 0.0f, z = 0.0f;
+    Vec3 operator+(const Vec3& other) const {
+        return {x + other.x, y + other.y, z + other.z};
+    }
+    Vec3 operator-(const Vec3& other) const {
+        return {x - other.x, y - other.y, z - other.z};
+    }
+    Vec3 operator*(double scalar) const {
+        return {x * scalar, y * scalar, z * scalar};
+    }
+    Vec3 operator-() const {
+        return {-x, -y, -z};
+    }
+};
 
 vector<vector<double>> loadMapPoints() {
     vector<vector<double>> points;
@@ -125,12 +145,103 @@ void addOccupiedVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGri
     }
 }
 
-void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
-    for (vector<vector<double>> p : allPoses) {
-        //calculate frustum
-        //calculate overlapping voxels
+double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
+    if (findMax) {
+        double max = -std::numeric_limits<double>::infinity();
+        if (direction == 'x') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].x > max) {
+                    max = vectors[i].x;
+                }
+            }
+        }
+        else if (direction == 'y') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].y > max) {
+                    max = vectors[i].y;
+                }
+            }
+        }
+        else if (direction == 'z') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].z > max) {
+                    max = vectors[i].z;
+                }
+            }
+        }
+        return max;
     }
-    
+    else {
+        double min = std::numeric_limits<double>::infinity();
+        if (direction == 'x') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].x < min) {
+                    min = vectors[i].x;
+                }
+            }
+        }
+        if (direction == 'y') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].y < min) {
+                    min = vectors[i].y;
+                }
+            }
+
+        }
+        if (direction == 'z') {
+            for (int i = 0; i < vectors.size(); i++) {
+                if (vectors[i].y < min) {
+                    min = vectors[i].y;
+                }
+            }
+
+        }
+        return min;
+    }
+}
+
+void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
+    double fovY = 0;
+    double aspectRatio = 0;
+    double farDist = 0;
+
+    for (vector<vector<double>> p : allPoses) {
+        Vec3 cameraPos = {p[0][3], p[1][3], p[2][3]};
+        Vec3 right = {p[0][0], p[1][0], p[2][0]};
+        Vec3 up    = {p[0][1], p[1][1], p[2][1]};
+        Vec3 forward = -Vec3{p[0][2], p[1][2], p[2][2]};
+
+        const float tanHalfFovY = tan(fovY / 2.0);
+        const float farHeight = 2.0 * tanHalfFovY * farDist;
+        const float farWidth = farHeight * aspectRatio;
+
+        const Vec3 farCenter = cameraPos + (forward * farDist);
+        const Vec3 halfUp = up * (farHeight / 2.0);
+        const Vec3 halfRight = right * (farWidth / 2.0);
+
+        Vec3 frustumFtl = farCenter + halfUp - halfRight;
+        Vec3 frustumFtr = farCenter + halfUp + halfRight;
+        Vec3 frustumFbl = farCenter - halfUp - halfRight;
+        Vec3 frustumFbr = farCenter - halfUp + halfRight;
+        vector<Vec3> vectors = {frustumFtl, frustumFtr, frustumFbl, frustumFbr};
+
+        double minX = getExtreme(vectors, 'x', false);
+        double minY = getExtreme(vectors, 'y', false);
+        double minZ = getExtreme(vectors, 'z', false);
+        double maxX = getExtreme(vectors, 'x', true);
+        double maxY = getExtreme(vectors, 'y', true);
+        double maxZ = getExtreme(vectors, 'z', true);
+
+        for (int i = (int) minX; i < (int) maxX; i++) {
+            for (int j = (int) minY; j < (int) maxY; j++) {
+                for (int k = (int) minZ; k < (int) maxZ; k++) {
+                    if (occupancyGrid[i][j][k] == 0) {
+                        occupancyGrid[i][j][k] = 1;
+                    }
+                }
+            }
+        }
+    }
 }
 
 int main() {
