@@ -75,3 +75,4 @@ Examples/ROS/Edge_SLAM/build/
 planner/main
 
 edgeslam/exported-data
+planner/occupancy-grid.txt
