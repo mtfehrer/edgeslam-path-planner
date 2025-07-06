@@ -21,6 +21,7 @@ const int VOXEL_SIZE = 1;
 string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/map-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
+string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
 
 struct Vec3 {
     double x = 0.0f, y = 0.0f, z = 0.0f;
@@ -128,9 +129,9 @@ void resetOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid) {
     occupancyGrid.clear();
     for (int i = 0; i < GRID_SIZE; i++) {
         vector<vector<char>> matrix;
-        for (int j = 0; i < GRID_SIZE; i++) {
+        for (int j = 0; j < GRID_SIZE; j++) {
             vector<char> row;
-            for (int k = 0; i < GRID_SIZE; i++) {
+            for (int k = 0; k < GRID_SIZE; k++) {
                 row.push_back(0);
             }
             matrix.push_back(row);
@@ -244,6 +245,23 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
     }
 }
 
+void exportOccupancyGrid(vector<vector<vector<char>>> occupancyGrid) {
+    ofstream f;
+    f.open(occupancyGridFilename.c_str());
+
+    for (int i = 0; i < GRID_SIZE; i++) {
+        for (int j = 0; j < GRID_SIZE; j++) {
+            for (int k = 0; k < GRID_SIZE; k++) {
+                f << (int) occupancyGrid[i][j][k] << " ";
+            }
+            f << "\n";
+        }
+        f << "\n";
+    }
+
+    f.close();
+}
+
 int main() {
     vector<vector<vector<char>>> occupancyGrid;
 
@@ -255,6 +273,9 @@ int main() {
         resetOccupancyGrid(occupancyGrid);
         addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
         addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
+
+        exportOccupancyGrid(occupancyGrid);
+        break;
         std::this_thread::sleep_for(std::chrono::seconds(2));
     }
     return 0;
