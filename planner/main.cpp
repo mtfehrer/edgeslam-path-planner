@@ -8,20 +8,22 @@
 
 using namespace std;
 
-const int GRID_SIZE = 50;
-const int VOXEL_SIZE = 1;
-
+const int GRID_SIZE = 100;
+const double VOXEL_SIZE = 0.1;
 
 // string mapPointsFilename = "/home/map-points.txt";
 // string newestPoseFilename = "/home/newest-pose.txt";
 // string allPosesFilename = "/home/all-poses.txt";
-
 
 //for testing without docker
 string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/map-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
 string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
+
+struct GridCoord {
+    int i, j, k;
+};
 
 struct Vec3 {
     double x = 0.0f, y = 0.0f, z = 0.0f;
@@ -38,6 +40,8 @@ struct Vec3 {
         return {-x, -y, -z};
     }
 };
+
+const Vec3 gridOrigin = {-5.0, -5.0, -1.0};
 
 vector<vector<double>> loadMapPoints() {
     vector<vector<double>> points;
@@ -125,6 +129,15 @@ vector<vector<vector<double>>> loadAllPoses() {
     return poses;
 }
 
+GridCoord worldToGrid(const Vec3& worldPoint) {
+    Vec3 relativePos = worldPoint - gridOrigin;
+    GridCoord gridCoord;
+    gridCoord.i = static_cast<int>(relativePos.x / VOXEL_SIZE);
+    gridCoord.j = static_cast<int>(relativePos.y / VOXEL_SIZE);
+    gridCoord.k = static_cast<int>(relativePos.z / VOXEL_SIZE);
+    return gridCoord;
+}
+
 void resetOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid) {
     occupancyGrid.clear();
     for (int i = 0; i < GRID_SIZE; i++) {
@@ -141,8 +154,15 @@ void resetOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid) {
 }
 
 void addOccupiedVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<double>>& mapPoints) {
-    for (vector<double> p : mapPoints) {
-        occupancyGrid[p[0] / VOXEL_SIZE][p[1] / VOXEL_SIZE][p[2] / VOXEL_SIZE] = 1;
+    for (const auto& p : mapPoints) {
+        Vec3 worldPoint = {p[0], p[1], p[2]};
+        GridCoord coord = worldToGrid(worldPoint);
+
+        if (coord.i >= 0 && coord.i < GRID_SIZE &&
+            coord.j >= 0 && coord.j < GRID_SIZE &&
+            coord.k >= 0 && coord.k < GRID_SIZE) {
+            occupancyGrid[coord.i][coord.j][coord.k] = 1;
+        }
     }
 }
 
@@ -191,8 +211,8 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
         }
         if (direction == 'z') {
             for (int i = 0; i < vectors.size(); i++) {
-                if (vectors[i].y < min) {
-                    min = vectors[i].y;
+                if (vectors[i].z < min) {
+                    min = vectors[i].z;
                 }
             }
 
@@ -202,9 +222,9 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
 }
 
 void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
-    double fovY = 0;
-    double aspectRatio = 0;
-    double farDist = 0;
+    double fovY = 0.75;
+    double aspectRatio = 1.333;
+    double farDist = 10;
 
     for (vector<vector<double>> p : allPoses) {
         Vec3 cameraPos = {p[0][3], p[1][3], p[2][3]};
@@ -236,8 +256,12 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
         for (int i = (int) minX; i < (int) maxX; i++) {
             for (int j = (int) minY; j < (int) maxY; j++) {
                 for (int k = (int) minZ; k < (int) maxZ; k++) {
-                    if (occupancyGrid[i][j][k] == 0) {
-                        occupancyGrid[i][j][k] = 1;
+                    if (i >= 0 && i < GRID_SIZE &&
+                        j >= 0 && j < GRID_SIZE &&
+                        k >= 0 && k < GRID_SIZE) {
+                        if (occupancyGrid[i][j][k] == 0) {
+                            occupancyGrid[i][j][k] = 1;
+                        }
                     }
                 }
             }
@@ -265,18 +289,15 @@ void exportOccupancyGrid(vector<vector<vector<char>>> occupancyGrid) {
 int main() {
     vector<vector<vector<char>>> occupancyGrid;
 
-    while (1) {
-        vector<vector<double>> mapPoints = loadMapPoints();
-        vector<vector<double>> newestPose = loadNewestPose();
-        vector<vector<vector<double>>> allPoses = loadAllPoses();
+    vector<vector<double>> mapPoints = loadMapPoints();
+    vector<vector<double>> newestPose = loadNewestPose();
+    vector<vector<vector<double>>> allPoses = loadAllPoses();
 
-        resetOccupancyGrid(occupancyGrid);
-        addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
-        addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
+    resetOccupancyGrid(occupancyGrid);
+    addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
+    addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
 
-        exportOccupancyGrid(occupancyGrid);
-        break;
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-    }
+    exportOccupancyGrid(occupancyGrid);
+
     return 0;
 }
