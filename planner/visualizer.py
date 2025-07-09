@@ -4,8 +4,8 @@ import numpy as np
 import pybullet as p
 
 VOXEL_SIZE = 0.5
-GRID_SIZE = 50
-FILENAME = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/occupancy-grid.txt"
+GRID_SIZE = 100
+FILENAME = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt"
 
 def import_occupancy_grid(filename, grid_size):
     if not os.path.exists(filename):
@@ -49,18 +49,15 @@ def import_occupancy_grid(filename, grid_size):
 def get_voxel_center(voxel_indices):
     return (np.array(voxel_indices) + 0.5) * VOXEL_SIZE
 
-def place_voxels(voxels, color=(0.7, 0.2, 0.2, 1.0)):
-    global voxel_grid
-    global update_vis
-    for v_index in voxels:
-        pos = [get_voxel_center(i) for i in v_index]
-        visualShapeId = p.createVisualShape(
-                shapeType=p.GEOM_BOX,
-                halfExtents=[VOXEL_SIZE / 2, VOXEL_SIZE / 2, VOXEL_SIZE / 2],
-                rgbaColor=color,
-                visualFramePosition=pos
-            )
-        p.createMultiBody(baseVisualShapeIndex=visualShapeId, basePosition=[0,0,0])
+def place_voxel(voxel_index, color=(0.7, 0.2, 0.2, 1.0)):
+    pos = [get_voxel_center(i) for i in voxel_index]
+    visualShapeId = p.createVisualShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=[VOXEL_SIZE / 2, VOXEL_SIZE / 2, VOXEL_SIZE / 2],
+            rgbaColor=color,
+            visualFramePosition=pos
+        )
+    p.createMultiBody(baseVisualShapeIndex=visualShapeId, basePosition=[0,0,0])
 
 
 imported_grid = import_occupancy_grid(FILENAME, GRID_SIZE)
@@ -75,11 +72,15 @@ if imported_grid:
 else:
     print("Failed to import the grid.")
 
-
-#we need to load the grid in pybullet
-
 physicsClient = p.connect(p.GUI)
+
 p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+
+for i in range(GRID_SIZE):
+    for j in range(GRID_SIZE):
+        for k in range(GRID_SIZE):
+            if imported_grid[i][j][k] == "2":
+                place_voxel((i, j, k))
 
 while p.isConnected():
     p.stepSimulation()
