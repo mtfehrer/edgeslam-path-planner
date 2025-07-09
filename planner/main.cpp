@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 using namespace std;
 
@@ -16,7 +17,7 @@ const double VOXEL_SIZE = 0.1;
 // string allPosesFilename = "/home/all-poses.txt";
 
 //for testing without docker
-string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/map-points.txt";
+string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
 string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
@@ -161,7 +162,7 @@ void addOccupiedVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGri
         if (coord.i >= 0 && coord.i < GRID_SIZE &&
             coord.j >= 0 && coord.j < GRID_SIZE &&
             coord.k >= 0 && coord.k < GRID_SIZE) {
-            occupancyGrid[coord.i][coord.j][coord.k] = 1;
+            occupancyGrid[coord.i][coord.j][coord.k] = 2;
         }
     }
 }
@@ -221,6 +222,7 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
     }
 }
 
+//broken
 void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
     double fovY = 0.75;
     double aspectRatio = 1.333;
@@ -253,9 +255,12 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
         double maxY = getExtreme(vectors, 'y', true);
         double maxZ = getExtreme(vectors, 'z', true);
 
-        for (int i = (int) minX; i < (int) maxX; i++) {
-            for (int j = (int) minY; j < (int) maxY; j++) {
-                for (int k = (int) minZ; k < (int) maxZ; k++) {
+        GridCoord minGrid = worldToGrid({minX, minY, minZ});
+        GridCoord maxGrid = worldToGrid({maxX, maxY, maxZ});
+
+        for (int i = (int) minGrid.i; i < (int) maxGrid.i; i++) {
+            for (int j = (int) minGrid.j; j < (int) maxGrid.j; j++) {
+                for (int k = (int) minGrid.k; k < (int) maxGrid.k; k++) {
                     if (i >= 0 && i < GRID_SIZE &&
                         j >= 0 && j < GRID_SIZE &&
                         k >= 0 && k < GRID_SIZE) {
