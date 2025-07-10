@@ -6,6 +6,7 @@ import pybullet as p
 VOXEL_SIZE = 0.5
 GRID_SIZE = 100
 FILENAME = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt"
+EMPTY_VOXEL = "0"
 
 def import_occupancy_grid(filename, grid_size):
     if not os.path.exists(filename):
@@ -49,38 +50,53 @@ def import_occupancy_grid(filename, grid_size):
 def get_voxel_center(voxel_indices):
     return (np.array(voxel_indices) + 0.5) * VOXEL_SIZE
 
-def place_voxel(voxel_index, color=(0.7, 0.2, 0.2, 1.0)):
-    pos = [get_voxel_center(i) for i in voxel_index]
-    visualShapeId = p.createVisualShape(
-            shapeType=p.GEOM_BOX,
-            halfExtents=[VOXEL_SIZE / 2, VOXEL_SIZE / 2, VOXEL_SIZE / 2],
-            rgbaColor=color,
-            visualFramePosition=pos
-        )
-    p.createMultiBody(baseVisualShapeIndex=visualShapeId, basePosition=[0,0,0])
+grid = import_occupancy_grid(FILENAME, GRID_SIZE)
 
-
-imported_grid = import_occupancy_grid(FILENAME, GRID_SIZE)
-
-if imported_grid:
-    print("Successfully imported the grid!")
-    print("Dimensions: i={}, j={}, k={}".format(
-        len(imported_grid),
-        len(imported_grid[0]),
-        len(imported_grid[0][0])
-    ))
-else:
-    print("Failed to import the grid.")
+link_positions = []
+link_colors = []
+base_pos = None
+base_color = None
 
 physicsClient = p.connect(p.GUI)
+
+voxel_visual_shape = p.createVisualShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=[VOXEL_SIZE / 2] * 3
+)
 
 p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
 
 for i in range(GRID_SIZE):
     for j in range(GRID_SIZE):
         for k in range(GRID_SIZE):
-            if imported_grid[i][j][k] == "2":
-                place_voxel((i, j, k))
+            if grid[i][j][k] != EMPTY_VOXEL:
+                pos = get_voxel_center((i, j, k))
+                color = (0, 0.5, 0, 1) if grid[i][j][k] == "1" else (0.5, 0, 0, 1)
+                if base_pos is None:
+                    base_pos = pos
+                    base_color = color
+                else:
+                    link_positions.append(np.array(pos) - base_pos)
+                    link_colors.append(color)
+
+print(f"link_positions: {link_positions}")
+
+grid_body_id = p.createMultiBody(
+    baseVisualShapeIndex=voxel_visual_shape,
+    basePosition=base_pos,
+    linkVisualShapeIndices=[voxel_visual_shape] * len(link_positions),
+    linkPositions=link_positions,
+    linkOrientations=[[0, 0, 0, 1]] * len(link_positions),
+    linkInertialFramePositions=[[0, 0, 0]] * len(link_positions),
+    linkInertialFrameOrientations=[[0, 0, 0, 1]] * len(link_positions),
+    linkParentIndices=[0] * len(link_positions),
+    linkJointTypes=[p.JOINT_FIXED] * len(link_positions),
+    linkJointAxis=[[0, 0, 1]] * len(link_positions)
+)
+
+p.changeVisualShape(grid_body_id, -1, rgbaColor=base_color)
+for link_index, color in enumerate(link_colors):
+    p.changeVisualShape(grid_body_id, link_index, rgbaColor=color)
 
 while p.isConnected():
     p.stepSimulation()
