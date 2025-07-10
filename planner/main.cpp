@@ -246,7 +246,7 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
         Vec3 frustumFtr = farCenter + halfUp + halfRight;
         Vec3 frustumFbl = farCenter - halfUp - halfRight;
         Vec3 frustumFbr = farCenter - halfUp + halfRight;
-        vector<Vec3> vectors = {frustumFtl, frustumFtr, frustumFbl, frustumFbr};
+        vector<Vec3> vectors = {frustumFtl, frustumFtr, frustumFbl, frustumFbr, cameraPos};
 
         double minX = getExtreme(vectors, 'x', false);
         double minY = getExtreme(vectors, 'y', false);
