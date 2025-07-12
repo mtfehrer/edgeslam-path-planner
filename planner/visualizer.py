@@ -38,12 +38,9 @@ def import_occupancy_grid(filename, grid_size):
                     if blank_line.strip() != "":
                         raise ValueError(f"Formatting error: Expected a blank line after slice i={i}, but found content.")
 
-    except ValueError as e:
-        print(f"An error occurred while parsing the file: {e}")
-        return []
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return []
+        exit()
 
     return grid
     
@@ -64,6 +61,11 @@ voxel_visual_shape = p.createVisualShape(
     halfExtents=[VOXEL_SIZE / 2] * 3
 )
 
+voxel_collision_shape = p.createCollisionShape(
+    shapeType=p.GEOM_BOX,
+    halfExtents=[VOXEL_SIZE / 2] * 3
+)
+
 p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
 
 for i in range(GRID_SIZE):
@@ -79,8 +81,6 @@ for i in range(GRID_SIZE):
                     link_positions.append(np.array(pos) - base_pos)
                     link_colors.append(color)
 
-print(f"link_positions: {link_positions}")
-
 grid_body_id = p.createMultiBody(
     baseVisualShapeIndex=voxel_visual_shape,
     basePosition=base_pos,
@@ -91,7 +91,10 @@ grid_body_id = p.createMultiBody(
     linkInertialFrameOrientations=[[0, 0, 0, 1]] * len(link_positions),
     linkParentIndices=[0] * len(link_positions),
     linkJointTypes=[p.JOINT_FIXED] * len(link_positions),
-    linkJointAxis=[[0, 0, 1]] * len(link_positions)
+    linkJointAxis=[[0, 0, 1]] * len(link_positions),
+    baseMass=0,
+    linkMasses=[0] * len(link_positions),
+    linkCollisionShapeIndices=[voxel_collision_shape] * len(link_positions),
 )
 
 p.changeVisualShape(grid_body_id, -1, rgbaColor=base_color)
