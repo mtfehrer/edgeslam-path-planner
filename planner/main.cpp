@@ -9,7 +9,7 @@
 
 using namespace std;
 
-const int GRID_SIZE = 100;
+const int GRID_SIZE = 50;
 const double VOXEL_SIZE = 0.1;
 
 // string mapPointsFilename = "/home/map-points.txt";
