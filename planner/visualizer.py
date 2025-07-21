@@ -3,7 +3,7 @@ import time
 import numpy as np
 import pybullet as p
 
-VOXEL_SIZE = 0.5
+VOXEL_SIZE = 1
 GRID_SIZE = 50
 FILENAME = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt"
 UNKNOWN_VOXEL = "0"
@@ -68,8 +68,8 @@ for i in range(GRID_SIZE):
 num_voxels = len(voxel_positions)
 
 visual_shape_id = p.createVisualShapeArray(shapeTypes=[p.GEOM_BOX] * num_voxels,
-                                           visualFramePositions=voxel_positions,
-                                           rgbaColors=[RED] * num_voxels)
+                                           visualFramePositions=voxel_positions,)
+#                                           rgbaColors=[RED] * num_voxels)
 
 # visual_shape_id = p.createVisualShapeArray(shapeTypes=[p.GEOM_BOX] * num_voxels,
 #                                            halfExtents=[[VOXEL_SIZE / 2, VOXEL_SIZE / 2, VOXEL_SIZE / 2]] * num_voxels,

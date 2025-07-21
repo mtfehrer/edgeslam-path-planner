@@ -222,7 +222,6 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
     }
 }
 
-//broken
 void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
     double fovY = 0.75;
     double aspectRatio = 1.333;
