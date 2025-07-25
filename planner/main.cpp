@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 #include <iostream>
+#include <algorithm>
 
 using namespace std;
 
@@ -40,6 +41,26 @@ struct Vec3 {
     Vec3 operator-() const {
         return {-x, -y, -z};
     }
+    Vec3 crossProduct(const Vec3& other) {
+        return {
+            y * other.z - z * other.y,
+            z * other.x - x * other.z,
+            x * other.y - y * other.x
+        };
+    }
+    double dotProduct(const Vec3& other) {
+        return x * other.x + y * other.y + z * other.z;
+    }
+};
+
+struct Pyramid {
+    Vec3 apex;
+    Vec3 base[4];
+};
+
+struct Plane {
+    Vec3 normal;
+    Vec3 point;
 };
 
 const Vec3 gridOrigin = {-5.0, -5.0, -1.0};
@@ -139,6 +160,15 @@ GridCoord worldToGrid(const Vec3& worldPoint) {
     return gridCoord;
 }
 
+Vec3 gridToWorld(GridCoord gridCoord) {
+    Vec3 relativePos = {
+        (gridCoord.i + 0.5) * VOXEL_SIZE, 
+        (gridCoord.j + 0.5) * VOXEL_SIZE, 
+        (gridCoord.k + 0.5) * VOXEL_SIZE
+    };
+    return gridOrigin + relativePos;
+}
+
 void resetOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid) {
     occupancyGrid.clear();
     for (int i = 0; i < GRID_SIZE; i++) {
@@ -202,7 +232,7 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
                 }
             }
         }
-        if (direction == 'y') {
+        else if (direction == 'y') {
             for (int i = 0; i < vectors.size(); i++) {
                 if (vectors[i].y < min) {
                     min = vectors[i].y;
@@ -210,7 +240,7 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
             }
 
         }
-        if (direction == 'z') {
+        else if (direction == 'z') {
             for (int i = 0; i < vectors.size(); i++) {
                 if (vectors[i].z < min) {
                     min = vectors[i].z;
@@ -220,6 +250,65 @@ double getExtreme(vector<Vec3> vectors, char direction, bool findMax) {
         }
         return min;
     }
+}
+
+bool isPointInsidePyramid(const Pyramid& pyramid, const Vec3& point) {
+    std::vector<Plane> planes;
+
+    // --- 1. Define the Base Plane ---
+    // The plane is defined by the first three base vertices.
+    Vec3 base_v1 = pyramid.base[1] - pyramid.base[0];
+    Vec3 base_v2 = pyramid.base[2] - pyramid.base[0];
+    Vec3 base_normal = base_v1.crossProduct(base_v2);
+
+    // Orient the normal to point "inwards" (towards the apex).
+    // We check the dot product of the vector from the base to the apex.
+    // If it's negative, the normal is pointing outwards, so we flip it.
+    if (base_normal.dotProduct(pyramid.apex - pyramid.base[0]) < 0) {
+        base_normal.x *= -1;
+        base_normal.y *= -1;
+        base_normal.z *= -1;
+    }
+    planes.push_back({base_normal, pyramid.base[0]});
+
+    // --- 2. Define the 4 Side Planes ---
+    for (int i = 0; i < 4; ++i) {
+        // Each side plane is a triangle formed by the apex and two adjacent base vertices.
+        const Vec3& p1 = pyramid.apex;
+        const Vec3& p2 = pyramid.base[i];
+        const Vec3& p3 = pyramid.base[(i + 1) % 4]; // Wrap around for the last vertex
+
+        Vec3 side_v1 = p2 - p1;
+        Vec3 side_v2 = p3 - p1;
+        Vec3 side_normal = side_v1.crossProduct(side_v2);
+
+        // To orient the normal inwards, we use a point we know is on the "other side"
+        // of the plane, relative to the pyramid's interior. The opposite base vertex works well.
+        // For the face (apex, base[i], base[i+1]), the opposite vertex is base[i+2].
+        const Vec3& opposite_vertex = pyramid.base[(i + 2) % 4];
+        
+        if (side_normal.dotProduct(opposite_vertex - p1) < 0) {
+             side_normal.x *= -1;
+             side_normal.y *= -1;
+             side_normal.z *= -1;
+        }
+        planes.push_back({side_normal, p1});
+    }
+
+    // --- 3. Check the Point Against All Planes ---
+    // For each plane, calculate the dot product of the vector from the plane's point
+    // to the test point, with the plane's normal.
+    // If this value is negative, the point is on the "outer" side of the plane,
+    // and thus cannot be inside the pyramid.
+    for (const auto& plane : planes) {
+        Vec3 vector_to_point = point - plane.point;
+        if (vector_to_point.dotProduct(plane.normal) < -1e-9) { // Use a small tolerance for floating point errors
+            return false; // Point is outside
+        }
+    }
+
+    // If the point is on the inner side of all planes, it's inside the pyramid.
+    return true;
 }
 
 void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, vector<vector<vector<double>>> allPoses) {
@@ -241,35 +330,44 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
         const Vec3 halfUp = up * (farHeight / 2.0);
         const Vec3 halfRight = right * (farWidth / 2.0);
 
-        Vec3 frustumFtl = farCenter + halfUp - halfRight;
-        Vec3 frustumFtr = farCenter + halfUp + halfRight;
-        Vec3 frustumFbl = farCenter - halfUp - halfRight;
-        Vec3 frustumFbr = farCenter - halfUp + halfRight;
-        vector<Vec3> vectors = {frustumFtl, frustumFtr, frustumFbl, frustumFbr, cameraPos};
+        Pyramid pyramid;
+        pyramid.apex = cameraPos;
+        pyramid.base[0] = farCenter + halfUp - halfRight; // Top-Left
+        pyramid.base[1] = farCenter + halfUp + halfRight; // Top-Right
+        pyramid.base[2] = farCenter - halfUp + halfRight; // Bottom-Right
+        pyramid.base[3] = farCenter - halfUp - halfRight; // Bottom-Left
 
-        double minX = getExtreme(vectors, 'x', false);
-        double minY = getExtreme(vectors, 'y', false);
-        double minZ = getExtreme(vectors, 'z', false);
-        double maxX = getExtreme(vectors, 'x', true);
-        double maxY = getExtreme(vectors, 'y', true);
-        double maxZ = getExtreme(vectors, 'z', true);
+        vector<Vec3> vectors = {pyramid.base[0], pyramid.base[1], pyramid.base[2], pyramid.base[3], cameraPos};
 
-        GridCoord minGrid = worldToGrid({minX, minY, minZ});
-        GridCoord maxGrid = worldToGrid({maxX, maxY, maxZ});
+        double minX_world = getExtreme(vectors, 'x', false);
+        double minY_world = getExtreme(vectors, 'y', false);
+        double minZ_world = getExtreme(vectors, 'z', false);
+        double maxX_world = getExtreme(vectors, 'x', true);
+        double maxY_world = getExtreme(vectors, 'y', true);
+        double maxZ_world = getExtreme(vectors, 'z', true);
 
-        for (int i = (int) minGrid.i; i < (int) maxGrid.i; i++) {
-            for (int j = (int) minGrid.j; j < (int) maxGrid.j; j++) {
-                for (int k = (int) minGrid.k; k < (int) maxGrid.k; k++) {
-                    if (i >= 0 && i < GRID_SIZE &&
-                        j >= 0 && j < GRID_SIZE &&
-                        k >= 0 && k < GRID_SIZE) {
-                        if (occupancyGrid[i][j][k] == 0) {
-                            occupancyGrid[i][j][k] = 1;
-                        }
+        GridCoord minGrid = worldToGrid({minX_world, minY_world, minZ_world});
+        GridCoord maxGrid = worldToGrid({maxX_world, maxY_world, maxZ_world});
+
+        int i_start = std::max(0, minGrid.i);
+        int i_end   = std::min(GRID_SIZE, maxGrid.i + 1);
+        int j_start = std::max(0, minGrid.j);
+        int j_end   = std::min(GRID_SIZE, maxGrid.j + 1);
+        int k_start = std::max(0, minGrid.k);
+        int k_end   = std::min(GRID_SIZE, maxGrid.k + 1);
+
+        for (int i = i_start; i < i_end; i++) {
+            for (int j = j_start; j < j_end; j++) {
+                for (int k = k_start; k < k_end; k++) {
+                    if (occupancyGrid[i][j][k] == 0 && isPointInsidePyramid(pyramid, gridToWorld({i, j, k}))) {
+                        occupancyGrid[i][j][k] = 1; // Mark as free
                     }
                 }
             }
         }
+
+        //for debugging: checks only the first pose
+        //break;
     }
 }
 
