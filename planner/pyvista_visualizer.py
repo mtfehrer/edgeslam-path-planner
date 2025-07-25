@@ -1,14 +1,6 @@
-#note: createVisualShapeArray function is buggy; it doesn't work
-#it has a limit on how many things it can link together (like 20 objects)
-#colors dont work
-#createVisualShape function also buggy
-#no other way of making meshes
-#yep, this library sucks
-
 import os
-import time
 import numpy as np
-import pybullet as p
+import pyvista as pv
 
 VOXEL_SIZE = 1
 GRID_SIZE = 50
@@ -67,10 +59,6 @@ def import_occupancy_grid(filename, grid_size):
 
 grid = import_occupancy_grid(FILENAME, GRID_SIZE)
 
-physicsClient = p.connect(p.GUI)
-
-p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
-
 free_voxel_positions = []
 occupied_voxel_positions = []
 
@@ -85,19 +73,16 @@ for i in range(GRID_SIZE):
 num_free_voxels = len(free_voxel_positions)
 num_occupied_voxels = len(occupied_voxel_positions)
 
-free_voxels_visual_shape_id = p.createVisualShapeArray(shapeTypes=[p.GEOM_BOX] * num_free_voxels,
-                                                       visualFramePositions=free_voxel_positions)
+plotter = pv.Plotter()
+cube = pv.Cube()
 
-# occupied_voxels_visual_shape_id = p.createVisualShapeArray(shapeTypes=[p.GEOM_BOX] * num_occupied_voxels,
-#                                            visualFramePositions=occupied_voxel_positions)
+free_voxels_grid = pv.PolyData(np.array(free_voxel_positions))
+occupied_voxels_grid = pv.PolyData(np.array(occupied_voxel_positions))
 
-p.createMultiBody(baseVisualShapeIndex=free_voxels_visual_shape_id)
-# p.createMultiBody(baseVisualShapeIndex=occupied_voxels_visual_shape_id)
+free_voxels_glyphs = free_voxels_grid.glyph(scale=False, geom=cube)
+occupied_voxels_glyphs = occupied_voxels_grid.glyph(scale=False, geom=cube)
 
-# for v in free_voxel_positions:
-#     visual_shape_id = p.createVisualShape(shapeType=p.GEOM_BOX, halfExtents=[1, 1, 1])
-#     p.createMultiBody(baseVisualShapeIndex=visual_shape_id, basePosition=v)
+plotter.add_mesh(free_voxels_glyphs, color='skyblue', show_edges=True)
+plotter.add_mesh(occupied_voxels_glyphs, color='skyblue', show_edges=True)
 
-while p.isConnected():
-    p.stepSimulation()
-    time.sleep(1/120)
+plotter.show()
