@@ -1,16 +1,18 @@
 import os
 import numpy as np
 import pyvista as pv
+import time
 
 VOXEL_SIZE = 1
 GRID_SIZE = 50
-FILENAME = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt"
+FILENAME = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid.txt"
 UNKNOWN_VOXEL = "0"
 FREE_VOXEL = "1"
 OCCUPIED_VOXEL = "2"
 RED = [0.5, 0.0, 0.0, 1.0]
 BLUE = [0, 0, 0.5, 1]
 
+# debugging:
 def print_grid():
     for matrix in grid:
         for row in matrix:
@@ -55,34 +57,46 @@ def import_occupancy_grid(filename, grid_size):
         exit()
 
     return grid
-    
 
-grid = import_occupancy_grid(FILENAME, GRID_SIZE)
 
-free_voxel_positions = []
-occupied_voxel_positions = []
-
-for i in range(GRID_SIZE):
-    for j in range(GRID_SIZE):
-        for k in range(GRID_SIZE):
-            if grid[i][j][k] == FREE_VOXEL:
-                free_voxel_positions.append([i, j, k])
-            if grid[i][j][k] == OCCUPIED_VOXEL:
-                occupied_voxel_positions.append([i, j, k])
-
-num_free_voxels = len(free_voxel_positions)
-num_occupied_voxels = len(occupied_voxel_positions)
-
-plotter = pv.Plotter()
 cube = pv.Cube()
+plotter = pv.Plotter()
+plotter.show(interactive_update=True)
+    
+while True:
+    plotter.clear()
 
-free_voxels_grid = pv.PolyData(np.array(free_voxel_positions))
-occupied_voxels_grid = pv.PolyData(np.array(occupied_voxel_positions))
+    grid = import_occupancy_grid(FILENAME, GRID_SIZE)
+    if grid == []:
+        time.sleep(1)
+        continue
 
-free_voxels_glyphs = free_voxels_grid.glyph(scale=False, geom=cube)
-occupied_voxels_glyphs = occupied_voxels_grid.glyph(scale=False, geom=cube)
+    free_voxel_positions = []
+    occupied_voxel_positions = []
 
-plotter.add_mesh(free_voxels_glyphs, color='skyblue', show_edges=True)
-plotter.add_mesh(occupied_voxels_glyphs, color='skyblue', show_edges=True)
+    data_exists = False
+    for i in range(GRID_SIZE):
+        for j in range(GRID_SIZE):
+            for k in range(GRID_SIZE):
+                if grid[i][j][k] == FREE_VOXEL:
+                    free_voxel_positions.append([i, j, k])
+                    data_exists = True
+                if grid[i][j][k] == OCCUPIED_VOXEL:
+                    occupied_voxel_positions.append([i, j, k])
+                    data_exists = True
+    if data_exists == False:
+        time.sleep(1)
+        continue
 
-plotter.show()
+    free_voxels_grid = pv.PolyData(np.array(free_voxel_positions))
+    occupied_voxels_grid = pv.PolyData(np.array(occupied_voxel_positions))
+
+    free_voxels_glyphs = free_voxels_grid.glyph(scale=False, geom=cube)
+    occupied_voxels_glyphs = occupied_voxels_grid.glyph(scale=False, geom=cube)
+
+    plotter.add_mesh(free_voxels_glyphs, color='skyblue', show_edges=True)
+    plotter.add_mesh(occupied_voxels_glyphs, color='red', show_edges=True)
+
+    plotter.update()
+
+    time.sleep(1)

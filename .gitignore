@@ -72,4 +72,6 @@ Examples/ROS/Edge_SLAM/build/
 
 .vscode
 
-planner/main
+grid/main
+edgeslam/exported-data
+grid/occupancy-grid.txt

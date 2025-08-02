@@ -7,6 +7,7 @@
 #include <limits>
 #include <iostream>
 #include <algorithm>
+#include <unistd.h>
 
 using namespace std;
 
@@ -21,7 +22,8 @@ const double VOXEL_SIZE = 0.1;
 string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
-string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
+string occupancyGridTempFilename = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid-temp.txt";
+string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid.txt";
 
 struct GridCoord {
     int i, j, k;
@@ -318,6 +320,7 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
 
     for (vector<vector<double>> p : allPoses) {
         Vec3 cameraPos = {p[0][3], p[1][3], p[2][3]};
+
         Vec3 right = {p[0][0], p[1][0], p[2][0]};
         Vec3 up    = {p[0][1], p[1][1], p[2][1]};
         Vec3 forward = -Vec3{p[0][2], p[1][2], p[2][2]};
@@ -372,34 +375,43 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
 }
 
 void exportOccupancyGrid(vector<vector<vector<char>>> occupancyGrid) {
-    ofstream f;
-    f.open(occupancyGridFilename.c_str());
+    ofstream tempFile(occupancyGridTempFilename);
+    if (!tempFile) {
+        cerr << "Error: Could not open temporary file." << endl;
+    }
 
     for (int i = 0; i < GRID_SIZE; i++) {
         for (int j = 0; j < GRID_SIZE; j++) {
             for (int k = 0; k < GRID_SIZE; k++) {
-                f << (int) occupancyGrid[i][j][k] << " ";
+                tempFile << (int) occupancyGrid[i][j][k] << " ";
             }
-            f << "\n";
+            tempFile << "\n";
         }
-        f << "\n";
+        tempFile << "\n";
     }
+    tempFile.close();
 
-    f.close();
+    if (rename(occupancyGridTempFilename.c_str(), occupancyGridFilename.c_str()) != 0) {
+        perror("Error renaming file");
+    }
 }
 
 int main() {
     vector<vector<vector<char>>> occupancyGrid;
 
-    vector<vector<double>> mapPoints = loadMapPoints();
-    vector<vector<double>> newestPose = loadNewestPose();
-    vector<vector<vector<double>>> allPoses = loadAllPoses();
+    while (1) {
+        vector<vector<double>> mapPoints = loadMapPoints();
+        vector<vector<double>> newestPose = loadNewestPose();
+        vector<vector<vector<double>>> allPoses = loadAllPoses();
 
-    resetOccupancyGrid(occupancyGrid);
-    addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
-    addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
+        resetOccupancyGrid(occupancyGrid);
+        addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
+        addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
 
-    exportOccupancyGrid(occupancyGrid);
+        exportOccupancyGrid(occupancyGrid);
+
+        sleep(1);
+    }
 
     return 0;
 }
