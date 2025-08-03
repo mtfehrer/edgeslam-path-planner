@@ -14,16 +14,19 @@ using namespace std;
 const int GRID_SIZE = 50;
 const double VOXEL_SIZE = 0.1;
 
-// string mapPointsFilename = "/home/map-points.txt";
-// string newestPoseFilename = "/home/newest-pose.txt";
-// string allPosesFilename = "/home/all-poses.txt";
+//in docker
+// string mapPointsFilename = "/home/planner/map-points.txt";
+// string newestPoseFilename = "/home/planner/newest-pose.txt";
+// string allPosesFilename = "/home/planner/all-poses.txt";
+// string occupancyGridTempFilename = "/home/planner/occupancy-grid-temp.txt";
+// string occupancyGridFilename = "/home/planner/occupancy-grid.txt";
 
-//for testing without docker
+//without docker
 string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-points.txt";
 string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
 string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
-string occupancyGridTempFilename = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid-temp.txt";
-string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid.txt";
+string occupancyGridTempFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid-temp.txt";
+string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
 
 struct GridCoord {
     int i, j, k;

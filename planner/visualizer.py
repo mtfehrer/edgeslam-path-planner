@@ -5,7 +5,10 @@ import time
 
 VOXEL_SIZE = 1
 GRID_SIZE = 50
-FILENAME = "/home/michael/Projects/edgeslam-path-planner/grid/occupancy-grid.txt"
+#with docker
+#FILENAME = "/home/occupancy-grid.txt"
+#without docker
+FILENAME = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt"
 UNKNOWN_VOXEL = "0"
 FREE_VOXEL = "1"
 OCCUPIED_VOXEL = "2"
