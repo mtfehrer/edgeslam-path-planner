@@ -20,13 +20,15 @@ services:
         networks:
             mynet:
                 ipv4_address: 1.1.0.3
-    # planner:
-    #     image: planner
-    #     volumes:
-    #         - ./edgeslam/exported-data/all-points.txt:/home/planner/all-points.txt
-    #         - ./edgeslam/exported-data/newest-pose.txt:/home/planner/newest-pose.txt
-    #         - ./edgeslam/exported-data/all-poses.txt:/home/planner/all-poses.txt
-    #     command: ["./main"]
+    planner:
+        image: ubuntu:25.10
+        volumes:
+            - ./edgeslam/exported-data/all-points.txt:/all-points.txt
+            - ./edgeslam/exported-data/newest-pose.txt:/newest-pose.txt
+            - ./edgeslam/exported-data/all-poses.txt:/all-poses.txt
+            - ./planner/create-grid:/create-grid
+            - ./planner/output:/output
+        command: ["./create-grid"]
 
 networks:
     mynet:

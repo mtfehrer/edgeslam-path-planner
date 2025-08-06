@@ -1,0 +1,3 @@
+occupied voxels aren't being added to grid
+-test if they are all outside of grid
+-test addOccupiedVoxelsToGrid function (make sure it gets all the points from the file and adds them to the grid)

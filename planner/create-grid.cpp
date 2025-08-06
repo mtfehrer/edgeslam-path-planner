@@ -15,18 +15,18 @@ const int GRID_SIZE = 50;
 const double VOXEL_SIZE = 0.1;
 
 //in docker
-// string mapPointsFilename = "/home/planner/map-points.txt";
-// string newestPoseFilename = "/home/planner/newest-pose.txt";
-// string allPosesFilename = "/home/planner/all-poses.txt";
-// string occupancyGridTempFilename = "/home/planner/occupancy-grid-temp.txt";
-// string occupancyGridFilename = "/home/planner/occupancy-grid.txt";
+string mapPointsFilename = "/all-points.txt";
+string newestPoseFilename = "/newest-pose.txt";
+string allPosesFilename = "/all-poses.txt";
+string occupancyGridTempFilename = "/output/occupancy-grid-temp.txt";
+string occupancyGridFilename = "/output/occupancy-grid.txt";
 
 //without docker
-string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-points.txt";
-string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
-string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
-string occupancyGridTempFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid-temp.txt";
-string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
+// string mapPointsFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-points.txt";
+// string newestPoseFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/newest-pose.txt";
+// string allPosesFilename = "/home/michael/Projects/edgeslam-path-planner/edgeslam/exported-data/all-poses.txt";
+// string occupancyGridTempFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid-temp.txt";
+// string occupancyGridFilename = "/home/michael/Projects/edgeslam-path-planner/planner/occupancy-grid.txt";
 
 struct GridCoord {
     int i, j, k;
@@ -371,9 +371,6 @@ void addFreeVoxelsToOccupancyGrid(vector<vector<vector<char>>>& occupancyGrid, v
                 }
             }
         }
-
-        //for debugging: checks only the first pose
-        //break;
     }
 }
 
@@ -408,8 +405,8 @@ int main() {
         vector<vector<vector<double>>> allPoses = loadAllPoses();
 
         resetOccupancyGrid(occupancyGrid);
-        addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
         addFreeVoxelsToOccupancyGrid(occupancyGrid, allPoses);
+        addOccupiedVoxelsToOccupancyGrid(occupancyGrid, mapPoints);
 
         exportOccupancyGrid(occupancyGrid);
 

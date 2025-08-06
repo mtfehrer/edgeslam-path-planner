@@ -1,7 +1,3 @@
-FROM python:3.13
+FROM ubuntu:18.04
 
 WORKDIR /home/planner
-
-COPY . .
-
-RUN make

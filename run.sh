@@ -2,5 +2,4 @@
 
 xhost +
 docker compose up &
-./grid/create-grid &
-python3 ./grid/visualizer.py
+python3 ./planner/visualizer.py
