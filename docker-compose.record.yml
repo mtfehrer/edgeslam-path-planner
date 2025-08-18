@@ -2,7 +2,6 @@ services:
     record:
         image: edgeslam
         devices:
-            - /dev/hidraw5:/dev/hidraw5
+            - /dev/hidraw5:/dev/hidraw2
             - /dev/video0:/dev/video0
-            - /dev/video1:/dev/video1
         command: ["bash", "record-init.sh"]
