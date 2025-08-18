@@ -3,4 +3,4 @@ services:
         image: edgeslam
         devices:
             - /dev/dri:/dev/dri
-        command: ["bash", "start-mobile-container.sh"]
+        command: ["bash", "record-init.sh"]
