@@ -1,9 +1,6 @@
-For simplicity, this repository will only support the following:
-A monocular setup running a bag file in a centralized environment.
+To record a bag file, do:
+docker-compose up mobile
+Then in the container run rosbag record
 
-There will be no support for the following:
-ZED camera, NVIDIA GPU, Distributed environment.
-
-The visualizer, Pyvista isn't run inside a docker container because there are too many dependencies to install. Needs same GPU drivers installed on the host.
-
-planner container uses output directory because atomic rename screws with docker's file bind mount
+to play a recording, do:
+rosbag play /home/edgeslam/rgbd_dataset_freiburg2_desk.bag /camera/rgb/image_color:=/camera/rgb/image_raw /camera/depth/image:=/camera/depth_registered/image_raw
